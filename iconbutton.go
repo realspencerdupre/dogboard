@@ -14,26 +14,32 @@ import (
 
 type SoundButton struct {
 	widget.Icon
-	buffer *beep.Buffer
+	Buffer     beep.Buffer
+	Sound      Sound
+	SampleRate beep.SampleRate
 }
+
+var MasterFormat = beep.Format{48000, 2, 2}
+var MasterBuffer = beep.NewBuffer(MasterFormat)
+var Speaker = speaker.Init(MasterFormat.SampleRate, MasterFormat.SampleRate.N(time.Second/100))
 
 func NewSoundButton(sound Sound) *SoundButton {
 	button := &SoundButton{}
 	button.ExtendBaseWidget(button)
+	button.Sound = sound
 
 	f, err := os.Open(sound.AudioPath)
 	if err != nil {
 		log.Fatal(err)
 	}
 	streamer, format, err := mp3.Decode(f)
+	button.SampleRate = format.SampleRate
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer streamer.Close()
-	speaker.Init(format.SampleRate, format.SampleRate.N(time.Second/100))
-	button.buffer = beep.NewBuffer(format)
-	button.buffer.Append(streamer)
-	streamer.Close()
+	button.Buffer = *beep.NewBuffer(format)
+	button.Buffer.Append(streamer)
 	soundPath := ""
 
 	// Sound has it's own icon
@@ -49,9 +55,11 @@ func NewSoundButton(sound Sound) *SoundButton {
 	return button
 }
 
-func (t *SoundButton) Tapped(_ *fyne.PointEvent) {
-	log.Println("I have been tapped")
-	speaker.Play(t.buffer.Streamer(0, t.buffer.Len()))
+func (button *SoundButton) Tapped(_ *fyne.PointEvent) {
+	log.Printf("Playing %s \n", button.Sound.Name)
+	streamer := button.Buffer.Streamer(0, button.Buffer.Len())
+	resamp := beep.Resample(4, button.SampleRate, MasterFormat.SampleRate, streamer)
+	speaker.Play(resamp)
 }
 
 func (t *SoundButton) TappedSecondary(_ *fyne.PointEvent) {

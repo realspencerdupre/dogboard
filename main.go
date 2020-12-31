@@ -6,30 +6,8 @@ import (
 	"fyne.io/fyne/layout"
 )
 
-type diagonal struct {
-}
-
-func (d *diagonal) MinSize(objects []fyne.CanvasObject) fyne.Size {
-	w, h := 0, 0
-	for _, o := range objects {
-		childSize := o.MinSize()
-
-		w += childSize.Width
-		h += childSize.Height
-	}
-	return fyne.NewSize(w, h)
-}
-
-func (d *diagonal) Layout(objects []fyne.CanvasObject, containerSize fyne.Size) {
-	pos := fyne.NewPos(0, containerSize.Height-d.MinSize(objects).Height)
-	for _, o := range objects {
-		size := o.MinSize()
-		o.Resize(size)
-		o.Move(pos)
-
-		pos = pos.Add(fyne.NewPos(size.Width, size.Height))
-	}
-}
+var ButtonSize = 104
+var GridWidth = 2
 
 func main() {
 	myApp := app.New()
@@ -39,13 +17,18 @@ func main() {
 
 	// Get sounds and create grid to arrange them in
 	sounds := GetSounds()
-	soundGrid := fyne.NewContainerWithLayout(layout.NewGridLayout(4))
+	soundGrid := fyne.NewContainerWithLayout(layout.NewGridLayout(GridWidth))
 
 	for _, sound := range sounds {
 		soundGrid.AddObject(NewSoundButton(sound))
 	}
 
 	mainWindow.SetContent(soundGrid)
-	mainWindow.Resize(fyne.NewSize(640, 640))
+
+	gridHeight := len(sounds) / GridWidth
+	if (len(sounds) % GridWidth) > 0 {
+		gridHeight = gridHeight + 1
+	}
+	mainWindow.Resize(fyne.NewSize(ButtonSize*GridWidth, ButtonSize*gridHeight))
 	mainWindow.ShowAndRun()
 }
