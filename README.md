@@ -1,3 +1,4 @@
+![dogboard logo](https://raw.githubusercontent.com/realspencerdupre/dogboard/main/icon.png?raw=true)
 # dogboard
 Simple sound board for Linux
 
