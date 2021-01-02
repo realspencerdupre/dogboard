@@ -15,17 +15,25 @@ import (
 // A common use case is to get a private config folder for your app to
 // place its settings files into, that are specific to the local user.
 var ConfigPath = configdir.LocalConfig("dogboard")
+var SoundsPath = filepath.Join(ConfigPath, "sounds")
 
-func MakeConfigDir() error {
-	err := configdir.MakePath(ConfigPath) // Ensure it exists.
-	if err != nil {
-		return err
+func MakeConfigDir() {
+	// For each of the program paths, make sure they exist
+	for _, path := range []string{ConfigPath, SoundsPath} {
+		_, err := os.Stat(path)
+		if os.IsNotExist(err) {
+			err := os.Mkdir(path, 0755)
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
 	}
-	return nil
 }
 
 type AppSettings struct {
 	SoundsPath string `json:"soundspath"`
+	GridWidth  int
+	IconSize   int
 }
 
 func GetConfig() (AppSettings, error) {
@@ -38,7 +46,10 @@ func GetConfig() (AppSettings, error) {
 	// Does the file not exist?
 	if _, err := os.Stat(configFile); os.IsNotExist(err) {
 		// Create the new config file.
-		settings := AppSettings{filepath.Join(ConfigPath, "sounds")}
+		settings := AppSettings{}
+		settings.SoundsPath = SoundsPath
+		settings.GridWidth = 8
+		settings.IconSize = 128
 		fh, err := os.Create(configFile)
 		if err != nil {
 			log.Fatal(err)
@@ -68,8 +79,7 @@ type Sound struct {
 	Name      string
 }
 
-func GetSounds() []Sound {
-	config, _ := GetConfig()
+func GetSounds(config AppSettings) []Sound {
 	sounds := []Sound{}
 
 	files, err := ioutil.ReadDir(config.SoundsPath)
