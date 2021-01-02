@@ -12,8 +12,6 @@ import (
 	"github.com/kirsle/configdir"
 )
 
-// A common use case is to get a private config folder for your app to
-// place its settings files into, that are specific to the local user.
 var ConfigPath = configdir.LocalConfig("dogboard")
 var SoundsPath = filepath.Join(ConfigPath, "sounds")
 
@@ -36,6 +34,17 @@ type AppSettings struct {
 	IconSize   int
 }
 
+func SaveConfig(configFile string, config AppSettings) {
+	fh, err := os.Create(configFile)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer fh.Close()
+
+	encoder := json.NewEncoder(fh)
+	encoder.Encode(&config)
+}
+
 func GetConfig() (AppSettings, error) {
 	// Make sure config dir exists
 	MakeConfigDir()
@@ -46,21 +55,14 @@ func GetConfig() (AppSettings, error) {
 	// Does the file not exist?
 	if _, err := os.Stat(configFile); os.IsNotExist(err) {
 		// Create the new config file.
-		settings := AppSettings{}
-		settings.SoundsPath = SoundsPath
-		settings.GridWidth = 8
-		settings.IconSize = 128
-		fh, err := os.Create(configFile)
-		if err != nil {
-			log.Fatal(err)
-		}
-		defer fh.Close()
-
-		encoder := json.NewEncoder(fh)
-		encoder.Encode(&settings)
+		config := AppSettings{}
+		config.SoundsPath = SoundsPath
+		config.GridWidth = 8
+		config.IconSize = 128
+		SaveConfig(configFile, config)
 	}
-	// Load the existing file.
-	settings := AppSettings{}
+	// Load the existing file
+	config := AppSettings{}
 	fh, err := os.Open(configFile)
 	if err != nil {
 		log.Fatal(err)
@@ -68,9 +70,9 @@ func GetConfig() (AppSettings, error) {
 	defer fh.Close()
 
 	decoder := json.NewDecoder(fh)
-	decoder.Decode(&settings)
+	decoder.Decode(&config)
 
-	return settings, nil
+	return config, nil
 }
 
 type Sound struct {
