@@ -21,9 +21,9 @@ type SoundButton struct {
 
 var MasterFormat = beep.Format{48000, 2, 2}
 var MasterBuffer = beep.NewBuffer(MasterFormat)
-var Speaker = speaker.Init(MasterFormat.SampleRate, MasterFormat.SampleRate.N(time.Second/100))
+var Speaker = speaker.Init(MasterFormat.SampleRate, MasterFormat.SampleRate.N(time.Second/16))
 
-func NewSoundButton(sound Sound) *SoundButton {
+func NewSoundButton(sound Sound) (*SoundButton, error) {
 	button := &SoundButton{}
 	button.ExtendBaseWidget(button)
 	button.Sound = sound
@@ -52,7 +52,7 @@ func NewSoundButton(sound Sound) *SoundButton {
 	icon, _ := fyne.LoadResourceFromPath(soundPath)
 	button.SetResource(icon)
 
-	return button
+	return button, nil
 }
 
 func (button *SoundButton) Tapped(_ *fyne.PointEvent) {

@@ -1,10 +1,9 @@
 package main
 
 import (
-	"path/filepath"
+	"log"
 
 	"fyne.io/fyne"
-	"fyne.io/fyne/dialog"
 	"fyne.io/fyne/layout"
 	"fyne.io/fyne/widget"
 	"github.com/skratchdot/open-golang/open"
@@ -18,7 +17,12 @@ func MakeSoundGrid(sounds []Sound, config AppSettings, window fyne.Window) {
 	soundGrid := fyne.NewContainerWithLayout(layout.NewGridLayout(config.GridWidth))
 
 	for _, sound := range sounds {
-		soundGrid.AddObject(NewSoundButton(sound))
+		soundObj, err := NewSoundButton(sound)
+		if err != nil {
+			log.Fatal(err)
+		} else {
+			soundGrid.AddObject(soundObj)
+		}
 	}
 
 	window.SetContent(soundGrid)
@@ -40,25 +44,7 @@ func MakeDefaultGrid(config AppSettings, window fyne.Window) {
 	}))
 
 	// Button to set custom sounds folder
-	container.AddObject(widget.NewButton("Set custom Sounds Folder", func() {
-		dialog.ShowFolderOpen(func(list fyne.ListableURI, err error) {
-			if err != nil {
-				dialog.ShowError(err, window)
-				return
-			}
-			if list == nil {
-				return
-			}
-
-			config.SoundsPath = list.String()[7:]
-			configFile := filepath.Join(ConfigPath, "settings.json")
-			SaveConfig(configFile, config)
-			sounds := GetSounds(config)
-			if len(sounds) > 0 {
-				MakeSoundGrid(sounds, config, window)
-			}
-		}, window)
-	}))
+	container.AddObject(widget.NewButton("Set custom Sounds Folder", SetSoundsFolder(config, window)))
 
 	// Button to refresh this list
 	container.AddObject(widget.NewButton("Refresh list", func() {
