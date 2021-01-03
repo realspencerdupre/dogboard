@@ -61,6 +61,3 @@ func (button *SoundButton) Tapped(_ *fyne.PointEvent) {
 	resamp := beep.Resample(4, button.SampleRate, MasterFormat.SampleRate, streamer)
 	speaker.Play(resamp)
 }
-
-func (t *SoundButton) TappedSecondary(_ *fyne.PointEvent) {
-}

@@ -28,13 +28,13 @@ func MakeConfigDir() {
 	}
 }
 
-type AppSettings struct {
+type AppConfig struct {
 	SoundsPath string `json:"soundspath"`
 	GridWidth  int
 	IconSize   int
 }
 
-func SaveConfig(configFile string, config AppSettings) {
+func SaveConfig(configFile string, config AppConfig) {
 	fh, err := os.Create(configFile)
 	if err != nil {
 		log.Fatal(err)
@@ -45,7 +45,7 @@ func SaveConfig(configFile string, config AppSettings) {
 	encoder.Encode(&config)
 }
 
-func GetConfig() (AppSettings, error) {
+func GetConfig() (AppConfig, error) {
 	// Make sure config dir exists
 	MakeConfigDir()
 	// Print config dir to stout
@@ -55,14 +55,14 @@ func GetConfig() (AppSettings, error) {
 	// Does the file not exist?
 	if _, err := os.Stat(configFile); os.IsNotExist(err) {
 		// Create the new config file.
-		config := AppSettings{}
+		config := AppConfig{}
 		config.SoundsPath = SoundsPath
 		config.GridWidth = 8
 		config.IconSize = 128
 		SaveConfig(configFile, config)
 	}
 	// Load the existing file
-	config := AppSettings{}
+	config := AppConfig{}
 	fh, err := os.Open(configFile)
 	if err != nil {
 		log.Fatal(err)
@@ -81,7 +81,7 @@ type Sound struct {
 	Name      string
 }
 
-func GetSounds(config AppSettings) []Sound {
+func GetSounds(config AppConfig) []Sound {
 	sounds := []Sound{}
 
 	files, err := ioutil.ReadDir(config.SoundsPath)

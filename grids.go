@@ -9,7 +9,7 @@ import (
 	"github.com/skratchdot/open-golang/open"
 )
 
-func MakeSoundGrid(sounds []Sound, config AppSettings, window fyne.Window) {
+func MakeSoundGrid(sounds []Sound, config AppConfig, window fyne.Window) {
 	if len(sounds) == 0 {
 		MakeDefaultGrid(config, window)
 		return
@@ -35,7 +35,7 @@ func MakeSoundGrid(sounds []Sound, config AppSettings, window fyne.Window) {
 	window.SetFixedSize(true)
 }
 
-func MakeDefaultGrid(config AppSettings, window fyne.Window) {
+func MakeDefaultGrid(config AppConfig, window fyne.Window) {
 	window.Resize(fyne.NewSize(640, 480))
 	container := fyne.NewContainerWithLayout(layout.NewGridLayout(1))
 	// Button to open the default sounds folder

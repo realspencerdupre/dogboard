@@ -7,7 +7,7 @@ import (
 	"fyne.io/fyne/dialog"
 )
 
-func SetSoundsFolder(config AppSettings, window fyne.Window) func() {
+func SetSoundsFolder(config AppConfig, window fyne.Window) func() {
 	return func() {
 		window.Resize(fyne.NewSize(640, 480))
 		dialog.ShowFolderOpen(func(list fyne.ListableURI, err error) {
