@@ -11,21 +11,34 @@ https://docs.djangoproject.com/en/4.1/ref/settings/
 """
 
 from pathlib import Path
+import environ
+
+root = environ.Path(__file__) - 1
+env = environ.Env()
+env_path = Path(root.path('.env'))
+
+# Create new .env file with new SECRET_KEY if .env file doesn't exist
+if not env_path.exists():
+    from django.core.management.utils import get_random_secret_key
+    with open(env_path, 'w') as _file:
+        new_secret = get_random_secret_key()
+        _file.write(f'SECRET_KEY={new_secret}')
+
+environ.Env.read_env()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-h+_vpl45g&u7ci^1v4^1fe%*u$e7*6$-8c=bh9+*w)46em5(xw'
+SECRET_KEY = env.str('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = env.bool('DEBUG', default=False)
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -37,6 +50,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'mainapp',
 ]
 
 MIDDLEWARE = [
