@@ -1,0 +1,147 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Dogboard</title>
+    <link rel="stylesheet" type="text/css" href="{% static 'mainapp/css/bootstrap.min.css' %}">
+    <style>
+        .square-icon {
+            width: 70px;
+            height: 70px;
+            position: relative;
+        }
+        
+        .square-icon img {
+            width: 100%;
+            height: 100%;
+        }
+        
+        .square-icon .checkbox {
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            top: 8px;
+            right: 8px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container mt-3">
+        <h2 class="d-flex justify-content-center">Add a sound</h2>
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="form-group my-2">
+                <label for="{{ form.name.id_for_label }}">Name:</label> {{ form.name }}
+            </div>
+            <div class="form-group my-2">
+                <label for="{{ form.audio.id_for_label }}">Audio:</label> {{ form.audio }}
+            </div>
+            <div class="form-group my-2">
+                <label for="{{ form.icon.id_for_label }}">Icon:</label> {{ form.icon }}
+            </div>
+            <div class="form-group my-2">
+                <label for="{{ form.description.id_for_label }}">Description:</label> {{ form.description }}
+            </div>
+            <div class="form-group my-2">
+                <label for="{{ form.source.id_for_label }}">Source:</label> {{ form.source }}
+            </div>
+            <div class="form-group mt-4">
+                <input class="form-control btn btn-primary" type="submit" value="Add">
+            </div>
+        </form>
+    </div>
+
+    <script type="text/javascript" src="{% static 'mainapp/js/bootstrap.bundle.min.js' %}"></script>
+    <script type="text/javascript" src="{% static 'mainapp/js/reconnecting-websocket.min.js' %}"></script>
+    <script type="text/javascript" src="{% static 'mainapp/js/knockout-3.5.1.js' %}"></script>
+    <script type="text/javascript" src="{% static 'mainapp/js/jquery-3.6.3.min.js' %}"></script>
+    {{ sounds|json_script:"sounds" }}
+
+    <script type="text/javascript">
+        const sounds = JSON.parse(document.getElementById('sounds').textContent);
+
+        mainsocket = new ReconnectingWebSocket(
+            'ws://' + location.hostname + ':8000/ws/chat/myroom/',
+        );
+        mainsocket.onmessage = function(e) {
+            const data = JSON.parse(e.data);
+            console.log(data)
+        }
+
+        var viewModel = {
+            sounds: ko.observableArray(sounds),
+            playSound: function(sound) {
+                console.log('Playing', sound.name)
+                mainsocket.send(JSON.stringify({
+                    'rpc': 'playsound',
+                    'args': sound.index,
+                    'timestamp': Date.now() / 1000,
+                }))
+            },
+            deleting: ko.observable(false),
+            importing: ko.observable(false),
+            toggleImporting: function() {
+                this.importing(!this.importing());
+                this.exporting(false);
+            },
+            exporting: ko.observable(false),
+            toggleExporting: function() {
+                this.exporting(!this.exporting());
+                this.importing(false);
+            },
+            allSelected: ko.observable(false),
+            selectBtnTextOptions: ['Select All', 'Select None'],
+            selectBtnText: ko.observable('Select All'),
+            selectAll: function() {
+                if (this.selectBtnText() == this.selectBtnTextOptions[0]) {
+                    this.selectBtnText(this.selectBtnTextOptions[1])
+                } else {
+                    this.selectBtnText(this.selectBtnTextOptions[0])
+                }
+                $('.square-icon .checkbox').each(function() {
+                    $('.square-icon .checkbox').prop('checked', !this.allSelected);
+                    this.allSelected = !this.allSelected
+                });
+            },
+            resetForm: function() {
+                this.exporting(false);
+                this.importing(false);
+                this.deleting(false);
+                var fileInput = $('#importFile')[0].value = null;
+            },
+            sendExport: function(formElement) {
+                this.resetForm();
+                return true;
+            },
+            sendImport: function() {
+                var formData = new FormData();
+                var fileInput = $('#importFile')[0];
+                formData.append('importFile', fileInput.files[0]);
+                $.ajaxSetup({
+                    beforeSend: function(xhr, settings) {
+                        if (!/^(GET|HEAD|OPTIONS|TRACE)$/i.test(settings.type) && !this.crossDomain) {
+                            var csrf_token = $('input[name=csrfmiddlewaretoken]').val();
+                            xhr.setRequestHeader("X-CSRFToken", csrf_token);
+                        }
+                    }
+                });
+                $.ajax({
+                    url: '/handle-import/',
+                    type: 'POST',
+                    processData: false,
+                    contentType: false,
+                    data: formData,
+                    async: false,
+                    success: function(response) {}
+                });
+                this.resetForm()
+            }
+        }
+        ko.applyBindings(viewModel);
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,12 @@
+version: '3'
+services:
+  web:
+    build: .
+    ports:
+      - "9178:8000"
+    depends_on:
+      - redis
+    devices:
+      - "/dev/snd"
+  redis:
+    image: "redis:alpine"

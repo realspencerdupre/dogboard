@@ -1,0 +1,215 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Dogboard</title>
+    <link rel="stylesheet" type="text/css" href="{% static 'mainapp/css/bootstrap.min.css' %}">
+    <style>
+        .square-icon {
+            width: 70px;
+            height: 70px;
+            position: relative;
+        }
+        
+        .square-icon img {
+            width: 100%;
+            height: 100%;
+            border-radius: 5px;
+        }
+        
+        .highlighted {
+            border: 2px solid yellow;
+        }
+        
+        .square-icon .checkbox {
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            top: 8px;
+            right: 8px;
+        }
+    </style>
+</head>
+
+<body>
+    <nav class="navbar navbar-expand-lg bg-body-tertiary" data-bs-theme="dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">
+                <img src="{% static 'mainapp/img/icon.png' %}" alt="Bootstrap" width="24" height="24"> Dogboard
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+          </button>
+            <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false"> Audio Output</a>
+                        <ul class="dropdown-menu">
+                            <li>
+                                <a class="dropdown-item" href="#" data-bind="click: function() {audioOutput('browser')}">
+                                    <span data-bind="if: audioOutput() === 'browser'">* </span> Browser
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="#" data-bind="click: function() {audioOutput('server')}">
+                                    <span data-bind="if: audioOutput() === 'server'">* </span> Server
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">Change Sounds</a>
+                        <ul class="dropdown-menu">
+                            <li>
+                                <a class="dropdown-item" href="#" data-bind="click: toggleExporting">Export sounds</a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="#" data-bind="click: toggleImporting">Import sounds</a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="#" data-bind="click: toggleDeleting">Delete sounds</a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{% url 'mainapp:add' %}">Add sound</a>
+                            </li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+    <div class="container mt-3">
+        <form method="post" data-bind="attr: { action: formAction }" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="input-group mb-3" data-bind="visible: importing">
+                <input type="file" name="zip_file" class="form-control" id="importFile" />
+                <button class="btn btn-primary" data-bind="click: sendImport, click: submitForm" id="button-addon1">Upload</button>
+            </div>
+            <button data-bind="visible: selectFormVisible, click: selectAll, text: selectBtnText" class="btn btn-secondary">selectBtn</button>
+            <button type="submit" data-bind="visible: selectFormVisible, click: submitForm, text: selectActionText" class="btn btn-primary" value="exportBtn">selectAction</button>
+
+            <hr>
+            <div class="d-flex flex-wrap justify-content-center" data-bind="foreach: sounds">
+                <div class="square-icon p-1" data-bind="click: $parent.playSound.bind($parent, $data)">
+                    <img data-bind="attr: {src: png}, css: {highlighted: playing}" alt="icon">
+                    <input type="checkbox" class="checkbox" data-bind="visible: $parent.selectFormVisible, attr: {name: 'names', value: name}" onclick="event.stopPropagation();">
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <script type="text/javascript" src="{% static 'mainapp/js/bootstrap.bundle.min.js' %}"></script>
+    <script type="text/javascript" src="{% static 'mainapp/js/reconnecting-websocket.min.js' %}"></script>
+    <script type="text/javascript" src="{% static 'mainapp/js/knockout-3.5.1.js' %}"></script>
+    <script type="text/javascript" src="{% static 'mainapp/js/knockout.mapping-latest.js' %}"></script>
+    <script type="text/javascript" src="{% static 'mainapp/js/jquery-3.6.3.min.js' %}"></script>
+    {{ sounds|json_script:"sounds" }}
+
+    <script type="text/javascript">
+        const sounds = JSON.parse(document.getElementById('sounds').textContent);
+
+        mainsocket = new ReconnectingWebSocket(
+            'ws://' + location.host + '/ws/chat/myroom/',
+        );
+        mainsocket.onmessage = function(e) {
+            const data = JSON.parse(e.data);
+            if (data['rpc'] == 'addSound') {
+                viewModel.sounds.push(ko.mapping.fromJS(data['sound']))
+            }
+            console.log(data)
+        }
+
+        var viewModel = {
+            sounds: ko.mapping.fromJS(sounds),
+            audioOutput: ko.observable('server'),
+            playSound: function(sound) {
+                console.log('Playing', sound.name())
+                if (this.audioOutput() == 'server') {
+                    mainsocket.send(JSON.stringify({
+                        'rpc': 'playsound',
+                        'args': sound.name(),
+                        'timestamp': Date.now() / 1000,
+                    }))
+                } else if (this.audioOutput() == 'browser') {
+                    new Audio(sound.mp3()).play()
+                }
+
+            },
+            formAction: ko.observable('/submit'),
+            selectActionText: ko.observable('Export'),
+            selectFormVisible: ko.observable(false),
+            deleting: ko.observable(false),
+            toggleDeleting: function() {
+                this.deleting(!this.deleting());
+                if (this.deleting()) {
+                    this.selectFormVisible(true)
+                    this.selectActionText('Delete')
+                } else {
+                    this.selectFormVisible(false)
+                }
+                this.importing(false);
+                this.exporting(false);
+            },
+            importing: ko.observable(false),
+            toggleImporting: function() {
+                this.importing(!this.importing());
+                this.exporting(false);
+                this.deleting(false);
+            },
+            exporting: ko.observable(false),
+            toggleExporting: function() {
+                this.exporting(!this.exporting());
+                if (this.exporting()) {
+                    this.selectFormVisible(true)
+                    this.selectActionText('Export')
+                } else {
+                    this.selectFormVisible(false)
+                }
+                this.importing(false);
+                this.deleting(false);
+            },
+            allSelected: ko.observable(false),
+            selectBtnTextOptions: ['Select All', 'Select None'],
+            selectBtnText: ko.observable('Select All'),
+            selectAll: function() {
+                if (this.selectBtnText() == this.selectBtnTextOptions[0]) {
+                    this.selectBtnText(this.selectBtnTextOptions[1])
+                } else {
+                    this.selectBtnText(this.selectBtnTextOptions[0])
+                }
+                $('.square-icon .checkbox').each(function() {
+                    $('.square-icon .checkbox').prop('checked', !this.allSelected);
+                    this.allSelected = !this.allSelected
+                });
+            },
+            resetForm: function() {
+                this.exporting(false);
+                this.importing(false);
+                this.deleting(false);
+                this.selectFormVisible(false)
+                $('.square-icon .checkbox').each(function() {
+                    $('.square-icon .checkbox').prop('checked', false);
+                    this.allSelected = false
+                });
+                var fileInput = $('#importFile')[0].value = null;
+            },
+            submitForm: function(formElement) {
+                // Logic for deleting or exporting based on toggle
+                if (this.exporting()) {
+                    this.formAction('/handle-export/')
+                } else if (this.importing()) {
+                    this.formAction('/handle-import/')
+                } else if (this.deleting()) {
+                    this.formAction('/handle-delete/')
+                }
+                $("form").submit();
+                this.resetForm();
+            },
+        }
+        ko.applyBindings(viewModel);
+    </script>
+</body>
+
+</html>
